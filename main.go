@@ -4,13 +4,17 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/robfig/cron/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 // PingType of resp
@@ -71,6 +75,11 @@ type Resp struct {
 	Interface  InterfaceType `json:"interface"`
 	Server     ServerType    `json:"server"`
 	Result     ResultType    `json:"result"`
+}
+
+func init() {
+	log.SetLevel(log.InfoLevel)
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
 
 func execute() {
@@ -171,8 +180,8 @@ func writeToFile(r Resp) {
 		fmt.Println("finished writing")
 	} else {
 		data := []string{
-			r.TimeStamp.Format("02-Jan-2006"),
-			currentTime.Format("03:04 PM"),
+			r.TimeStamp.Format("06-Jan-02"),
+			currentTime.Format("15:04 PM"),
 			r.Type,
 			FloatToString(r.Ping.Jitter),
 			FloatToString(r.Ping.Latency),
@@ -205,9 +214,15 @@ func FloatToString(input_num float64) string {
 }
 
 func main() {
+	log.Info("Started periodicbw")
 	if runtime.GOOS == "windows" {
 		fmt.Println("Can't Execute this on a windows machine")
 	} else {
-		execute()
+		c := cron.New()
+		c.AddFunc("@every 1m", execute)
+		go c.Start()
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
 	}
 }
