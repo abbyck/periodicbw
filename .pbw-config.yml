@@ -1,0 +1,2 @@
+# refers to the frequency of the test. Format specified here: https://github.com/robfig/cron#background---cron-spec-format
+frequency: "@every 5s"
